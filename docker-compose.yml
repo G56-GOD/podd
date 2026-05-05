@@ -1,0 +1,52 @@
+services:
+  backend:
+    build: ./backend
+    container_name: backend
+    depends_on:
+      bd:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+aasyncpg://postgra:1234@bd:5432/testdb
+      SECRET_KEY: default-secret-key
+      JWT_ALGORITHM: HS256
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/src
+    command:
+      sh -c "
+      python manage.py migrate &&
+      python manage.py runserver
+      "
+    networks:
+      - network
+    restart: unless-stopped
+  bd:
+    image: postgres:16
+    container_name: bd
+    environment: 
+      POSTGRES_USER: postgra
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: testdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgra -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - network
+volumes:
+  postgres_data:
+
+networks:
+  network:
+    driver: bridge
+
+
+
+    
